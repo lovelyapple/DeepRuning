@@ -1,69 +1,229 @@
-﻿using System.Collections;
+﻿using System;
+using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] Camera playerCamera;
-    [SerializeField] Vector3 playerMoveCameraDiff = new Vector3(0, 2f, -0.5f);
-    [SerializeField] Vector3 playerTargetCameraDiff = new Vector3(0, 0, 5f);
-    [Range(0.1f, 10f)] public float playerCameraFollowSpeed = 5f;
-    [SerializeField] Rigidbody playerRigidbody;
-    [Range(0.1f, 5f)] public float baseSpeed = 2f;
-    [Range(0.1f, 2000f)] public float jumpPower = 100f;
-    [SerializeField] GameObject groundRoot;
-    Vector3 runDirection = Vector3.forward;
-    void Update()
-    {
-        if (IsPlayerFallDown())
-        {
-            GameObject.Destroy(this.gameObject);
-        }
-
-        var move = runDirection * baseSpeed * Time.deltaTime;
-        var currentPos = transform.position;
-        transform.rotation = Quaternion.Euler(0, 0, 0);
-        LocalMove(currentPos + move);
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            playerRigidbody.AddForce(new Vector3(0, jumpPower, 0));
-        }
-
-        if (Input.GetKey(KeyCode.LeftArrow))
-        {
-            groundRoot.transform.Rotate(0, 0, Time.deltaTime * 10f);
-        }
-        else if (Input.GetKey(KeyCode.RightArrow))
-        {
-            groundRoot.transform.Rotate(0, 0, -Time.deltaTime * 10f);
-        }
-    }
-    void FixedUpdate()
-    {
-        UpdateCamera();
-    }
-    void LocalMove(Vector3 pos)
-    {
-        pos.x = 0;
-        transform.position = pos;
-    }
-    void UpdateCamera()
+    [SerializeField] Vector3 playerCameraDiff;
+    [SerializeField] Transform groundRoot;
+    [Range(1f, 30f)] [SerializeField] float groundRotateSpeed;
+    [SerializeField] Vector3 moveDirection;
+    [SerializeField] float runSpeed;
+    [Range(1f, 30f)] [SerializeField] float maxSpeed;
+    [SerializeField] Vector3 playerSize;
+    [Range(1f, 10f)] [SerializeField] float gravity;
+    [Range(1.0f, 2.0f)] [SerializeField] float groundCheckRange;
+    [SerializeField] float JumpPower;
+    [SerializeField] bool moveManual;
+    //[SerializeField] bool isTouchGroundBefore;
+    /// <summary>
+    /// Start is called on the frame when a script is enabled just before
+    /// any of the Update methods is called the first time.
+    /// </summary>
+    void Start()
     {
         if (playerCamera == null)
         {
+            playerCamera = Camera.main;
+        }
+    }
+    void Update()
+    {
+        var currentPos = transform.position;
+        currentPos.x = 0;
+
+        if (moveManual)
+        {
+            UpdateMoveManual();
+        }
+        else
+        {
+            moveDirection.z = Time.deltaTime * runSpeed;
+        }
+
+        //debug
+        if (currentPos.y <= -50f)
+        {
+            moveDirection.y = 0;
+            currentPos.y = 0;
+        }
+
+        CheckIsTouchGround((v) => //touched
+        {
+            moveDirection.y = v.y - transform.position.y + (playerSize.y / 2f);//player size + blocksize
+            UpdateJump();
+        }, () => //missed
+        {
+            moveDirection.y -= Time.deltaTime * gravity;
+        });
+
+        currentPos += moveDirection;
+        currentPos.x = 0;
+        transform.position = currentPos;
+        UpdateGround();
+    }
+    void LateUpdate()
+    {
+        UpdateCamera();
+    }
+    void UpdateMoveManual()
+    {
+        if (Input.GetKey(KeyCode.UpArrow))
+        {
+            moveDirection.z += Time.deltaTime * runSpeed;
+        }
+        else if (Input.GetKey(KeyCode.DownArrow))
+        {
+            moveDirection.z -= Time.deltaTime * runSpeed;
+        }
+        else
+        {
+            if (Mathf.Abs(moveDirection.z) < 0.001f)
+            {
+                moveDirection.z = 0;
+            }
+            else
+            {
+                moveDirection.z *= 0.9f;
+            }
+        }
+
+        if (moveDirection.z != 0)
+        {
+            moveDirection.z = Mathf.Clamp(moveDirection.z, -maxSpeed, maxSpeed);
+        }
+    }
+    void UpdateCamera()
+    {
+        playerCamera.transform.position = transform.position + playerCameraDiff;
+    }
+    void UpdateJump()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            moveDirection.y = JumpPower;
+        }
+    }
+    void UpdateGround()
+    {
+        if (Input.GetKey(KeyCode.LeftArrow))
+        {
+            groundRoot.transform.Rotate(0, 0, Time.deltaTime * groundRotateSpeed);
+        }
+        else if (Input.GetKey(KeyCode.RightArrow))
+        {
+            groundRoot.transform.Rotate(0, 0, -Time.deltaTime * groundRotateSpeed);
+        }
+    }
+    class RayHitClass
+    {
+        public RaycastHit hit;
+        public RayHitClass(RaycastHit hit)
+        {
+            this.hit = hit;
+        }
+    }
+    RayHitClass CheckGroundSingle(Vector3 diff, float checkRange)
+    {
+        var pos = transform.position + diff;
+
+        var hits = Physics.RaycastAll(pos, Vector3.down, checkRange);
+
+        if (hits.Length > 0)
+        {
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (hits[i].transform.gameObject.tag == "ground")
+                {
+                    return new RayHitClass(hits[i]);
+                }
+            }
+        }
+
+        return null;
+    }
+    void CheckIsTouchGround(Action<Vector3> onHitObj, Action onMissed)
+    {
+        var posCenter = Vector3.zero;
+        var checkRange = -moveDirection.y * groundCheckRange;
+        checkRange = Mathf.Clamp(checkRange, playerSize.y / 2f * 1.1f, 100);
+
+        //中心
+        var pos = posCenter;
+        var hit = CheckGroundSingle(pos, checkRange);
+
+        if (hit != null && onHitObj != null)
+        {
+            onHitObj(hit.hit.point);
             return;
         }
 
-        var cameraMovePos = transform.position + playerMoveCameraDiff;
-        //playerCamera.transform.position = cameraMovePos;
-        playerCamera.transform.position = Vector3.Lerp(playerCamera.transform.position, cameraMovePos, 0.124f);
-        var targetPos = transform.position + playerTargetCameraDiff;
-        playerCamera.transform.LookAt(targetPos);
-    }
+        //左前
+        pos.z = +playerSize.z / 2f;
+        pos.x = +playerSize.x / 2f;
+        var hitLF = CheckGroundSingle(pos, checkRange);
 
-    bool IsPlayerFallDown()
-    {
-        return transform.position.y < -100f;
+        if (hit != null && onHitObj != null)
+        {
+            onHitObj(hit.hit.point);
+            return;
+        }
+
+        //右前
+        pos.z = +playerSize.z / 2f;
+        pos.x = -playerSize.x / 2f;
+        var hitRF = CheckGroundSingle(pos, checkRange);
+
+        if (hit != null && onHitObj != null)
+        {
+            onHitObj(hit.hit.point);
+            return;
+        }
+
+        //左後
+        pos.z = -playerSize.z / 2f;
+        pos.x = -playerSize.x / 2f;
+        var hitLB = CheckGroundSingle(pos, checkRange);
+
+        if (hit != null && onHitObj != null)
+        {
+            onHitObj(hit.hit.point);
+            return;
+        }
+
+        //右後
+        pos.z = +playerSize.z / 2f;
+        pos.x = -playerSize.x / 2f;
+        var hitRB = CheckGroundSingle(pos, checkRange);
+
+        if (hit != null && onHitObj != null)
+        {
+            onHitObj(hit.hit.point);
+            return;
+        }
+
+
+        if (onMissed != null)
+        {
+            onMissed();
+        }
+
+        // pos.z -= 1f;
+        // hits = Physics.RaycastAll(pos, Vector3.down, checkRange);
+
+        // if (hits.Length > 0)
+        // {
+        //     for (int i = 0; i < hits.Length; i++)
+        //     {
+        //         if (hits[i].transform.gameObject.tag == "ground")
+        //         {
+        //             Debug.Log("touch");
+        //             return true;
+        //         }
+        //     }
+        // }
     }
 }
