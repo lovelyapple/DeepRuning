@@ -24,6 +24,14 @@ public class CameraController : MonoBehaviour
     {
         UpdateCameraSettings();
     }
+    /// <summary>
+    /// Update is called every frame, if the MonoBehaviour is enabled.
+    /// </summary>
+    void Update()
+    {
+        var a = Input.acceleration;
+        this.transform.rotation = new Quaternion(a.x, a.y, a.z, 0);
+    }
     void UpdateCameraSettings()
     {
     }
@@ -31,24 +39,24 @@ public class CameraController : MonoBehaviour
     /// <summary>
     /// Update is called every frame, if the MonoBehaviour is enabled.
     /// </summary>
-    void Update()
-    {
-        currentRotation = Input.gyro.attitude;
-        uiLabel.text = string.Format("Gyro x{0:0.000},y{1:0.000},z{2:0.000}", currentRotation.x, currentRotation.y, currentRotation.z);
+    // void Update()
+    // {
+    //     currentRotation = Input.gyro.attitude;
+    //     uiLabel.text = string.Format("Gyro x{0:0.000},y{1:0.000},z{2:0.000}", currentRotation.x, currentRotation.y, currentRotation.z);
 
-        switch (cameraMode)
-        {
-            case CameraMode.SimpleFollow:
-                transform.position = player.transform.position + followDiff;
-                var lookAtTarget = player.transform.position + simpleFollowLookTarget;
-                transform.LookAt(lookAtTarget);
-                break;
-            case CameraMode.LerpFollow:
-                break;
-            case CameraMode.VRModePC:
-                break;
-            case CameraMode.VRModeDev:
-                break;
-        }
-    }
+    //     switch (cameraMode)
+    //     {
+    //         case CameraMode.SimpleFollow:
+    //             transform.position = player.transform.position + followDiff;
+    //             var lookAtTarget = player.transform.position + simpleFollowLookTarget;
+    //             transform.LookAt(lookAtTarget);
+    //             break;
+    //         case CameraMode.LerpFollow:
+    //             break;
+    //         case CameraMode.VRModePC:
+    //             break;
+    //         case CameraMode.VRModeDev:
+    //             break;
+    //     }
+    // }
 }
