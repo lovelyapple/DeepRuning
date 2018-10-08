@@ -98,15 +98,17 @@ MonoBehaviour:
   playerCamera: {fileID: 0}
   playerCameraDiff: {x: 0, y: 2, z: -4}
   groundRoot: {fileID: 0}
-  groundRotateSpeed: 10.5
+  groundRotateSpeed: 30
   moveDirection: {x: 0, y: 0, z: 0}
-  runSpeed: 3
+  runSpeed: 1
   maxSpeed: 1
   playerSize: {x: 1, y: 1, z: 2}
   gravity: 1
   groundCheckRange: 1.1
   JumpPower: 0.8
   moveManual: 1
+  buttonUp: {fileID: 0}
+  buttonDown: {fileID: 0}
 --- !u!135 &135165904970121486
 SphereCollider:
   m_ObjectHideFlags: 1

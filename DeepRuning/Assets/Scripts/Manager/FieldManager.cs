@@ -10,6 +10,7 @@ public class FieldManager : ManagerBase<FieldManager>
     [SerializeField] GameObject groundRoot;
     [SerializeField] PlayerController playerController;
     [SerializeField] GameObject[] startGrounds;
+    public bool enableFreeCamera;
     int ranRange;
     int spawnIndex;
     int deleteCount;

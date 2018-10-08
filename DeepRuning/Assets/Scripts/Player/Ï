@@ -6,6 +6,8 @@ using UnityEngine;
 
 public partial class PlayerController : MonoBehaviour
 {
+    [SerializeField] Camera playerCamera;
+    [SerializeField] Vector3 playerCameraDiff;
     [SerializeField] Transform groundRoot;
     [Range(1f, 30f)] [SerializeField] float groundRotateSpeed;
     [SerializeField] Vector3 moveDirection;
@@ -18,10 +20,18 @@ public partial class PlayerController : MonoBehaviour
     [SerializeField] bool moveManual;
     bool isTouchedGround;
 
-    [SerializeField] LineRenderer[] lines;
-
+    //[SerializeField] bool isTouchGroundBefore;
+    /// <summary>
+    /// Start is called on the frame when a script is enabled just before
+    /// any of the Update methods is called the first time.
+    /// </summary>
     void Start()
     {
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+        }
+
         SetInput();
     }
     void Update()
@@ -56,17 +66,19 @@ public partial class PlayerController : MonoBehaviour
             isTouchedGround = false;
         });
 
-        if (jumped == true)
+        if(jumped == true)
         {
-            jumped = false;
-            moveDirection.y = JumpPower;
+            
         }
-
 
         currentPos += moveDirection;
         currentPos.x = 0;
         transform.position = currentPos;
         UpdateGround();
+    }
+    void LateUpdate()
+    {
+        UpdateCamera();
     }
     void UpdateMoveManual()
     {
@@ -96,6 +108,11 @@ public partial class PlayerController : MonoBehaviour
         }
 
     }
+
+    void UpdateCamera()
+    {
+        playerCamera.transform.position = transform.position + playerCameraDiff;
+    }
     void UpdateJump()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -122,24 +139,9 @@ public partial class PlayerController : MonoBehaviour
             this.hit = hit;
         }
     }
-    RayHitClass CheckGroundSingle(Vector3 diff, float checkRange, int? lineIndex = null)
+    RayHitClass CheckGroundSingle(Vector3 diff, float checkRange)
     {
         var pos = transform.position + diff;
-        var lineEndPos = pos + Vector3.down * 5;
-
-        Vector3[] drawPos = new Vector3[2] { pos, lineEndPos };
-
-        if (lineIndex.HasValue)
-        {
-            try
-            {
-                lines[lineIndex.Value].SetPositions(drawPos);
-            }
-            catch
-            {
-
-            }
-        }
 
         var hits = Physics.RaycastAll(pos, Vector3.down, checkRange);
 
@@ -175,44 +177,44 @@ public partial class PlayerController : MonoBehaviour
         //左前
         pos.z = +playerSize.z / 2f;
         pos.x = +playerSize.x / 2f;
-        var hitLF = CheckGroundSingle(pos, checkRange, 0);
+        var hitLF = CheckGroundSingle(pos, checkRange);
 
-        if (hitLF != null && onHitObj != null)
+        if (hit != null && onHitObj != null)
         {
-            onHitObj(hitLF.hit.point);
+            onHitObj(hit.hit.point);
             return;
         }
 
         //右前
         pos.z = +playerSize.z / 2f;
         pos.x = -playerSize.x / 2f;
-        var hitRF = CheckGroundSingle(pos, checkRange, 1);
+        var hitRF = CheckGroundSingle(pos, checkRange);
 
-        if (hitRF != null && onHitObj != null)
+        if (hit != null && onHitObj != null)
         {
-            onHitObj(hitRF.hit.point);
+            onHitObj(hit.hit.point);
             return;
         }
 
         //左後
         pos.z = -playerSize.z / 2f;
         pos.x = -playerSize.x / 2f;
-        var hitLB = CheckGroundSingle(pos, checkRange, 2);
+        var hitLB = CheckGroundSingle(pos, checkRange);
 
-        if (hitLB != null && onHitObj != null)
+        if (hit != null && onHitObj != null)
         {
-            onHitObj(hitLB.hit.point);
+            onHitObj(hit.hit.point);
             return;
         }
 
         //右後
-        pos.z = -playerSize.z / 2f;
-        pos.x = +playerSize.x / 2f;
-        var hitRB = CheckGroundSingle(pos, checkRange, 3);
+        pos.z = +playerSize.z / 2f;
+        pos.x = -playerSize.x / 2f;
+        var hitRB = CheckGroundSingle(pos, checkRange);
 
-        if (hitRB != null && onHitObj != null)
+        if (hit != null && onHitObj != null)
         {
-            onHitObj(hitRB.hit.point);
+            onHitObj(hit.hit.point);
             return;
         }
 
